@@ -1,0 +1,82 @@
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.metrics import accuracy_score, mean_squared_error
+from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+import pandas as pd
+
+# Sample input features
+x_train = df.drop(["crop", "totalprice"], axis=1)
+
+# Sample crop types (string labels)
+crop_types = df["crop"]
+# Sample cost factors (numeric labels)
+cost_factors = df["totalprice"]
+
+# Combine the crop types and cost factors for each sample
+labels = list(zip(crop_types, cost_factors))
+# Split the data into training and testing sets
+x_train, x_test, labels_train, labels_test = train_test_split(x_train, labels, test_size=0.2, random_state=42)
+
+# Assuming 'soiltype' is a categorical column in your DataFrame
+categorical_features = ['soiltype']
+
+# Separate numerical and categorical features
+numerical_features = [col for col in x_train.columns if col not in categorical_features]
+
+# Create a preprocessor to handle numerical and categorical features separately
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', 'passthrough', numerical_features),
+        ('cat', OneHotEncoder(), categorical_features)
+    ])
+
+# Create a MultiOutputClassifier with RandomForestClassifier
+multioutput_clf = MultiOutputClassifier(RandomForestClassifier(random_state=42))
+
+# Create a pipeline with the preprocessor and the classifier
+pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', multioutput_clf)
+])
+
+# Fit the model
+pipeline.fit(x_train, labels_train)
+
+# Make predictions on the test set
+predictions = pipeline.predict(x_test)
+
+# Unpack the predictions into separate lists for crop type and cost factor
+predicted_types, predicted_costs = zip(*predictions)
+
+# Evaluate the model for the crop type prediction
+accuracy_types = accuracy_score([item[0] for item in labels_test], predicted_types)
+print(f"Accuracy for crop type prediction: {accuracy_types}")
+rf_accuracy = accuracy_types
+
+# Calculate precision, recall, and F1 score for crop type prediction
+precision = precision_score([item[0] for item in labels_test], predicted_types, average='weighted')
+recall = recall_score([item[0] for item in labels_test], predicted_types, average='weighted')
+f1 = f1_score([item[0] for item in labels_test], predicted_types, average='weighted')
+
+print(f"Precision for crop type prediction: {precision}")
+print(f"Recall for crop type prediction: {recall}")
+print(f"F1 Score for crop type prediction: {f1}")
+# Ensure cost factors are in the same format (float) for mean squared error calculation
+true_costs = [float(item[1]) for item in labels_test]
+
+# Evaluate the model for the cost factor prediction
+# mse_costs = mean_squared_error(true_costs, predicted_costs)
+# print(f"Mean Squared Error for cost factor: {mse_costs}")
+
+# Example prediction on new data with soiltype parameter
+new_data = pd.DataFrame([[19,10,288, 14.63,85.43,2.76,211.27,'laterite']], columns=x_train.columns)
+new_predictions = pipeline.predict(new_data)
+
+print("Predicted crop type on new data:", new_predictions[0][0])
+print("Predicted cost factor on new data:", new_predictions[0][1])
+
+

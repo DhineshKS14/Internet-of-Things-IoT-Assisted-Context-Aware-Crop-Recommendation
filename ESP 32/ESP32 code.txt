@@ -1,0 +1,168 @@
+
+#include <ModbusMaster.h>
+#include <ArduinoJson.h>
+#include <WiFi.h>
+#include <PubSubClient.h>
+// WiFi 
+const char *ssid = "YOUR SSID"; 
+const char *password = "YOUR PASSWORD";  
+// MQTT
+const char *mqtt_broker = "broker.hivemq.com";
+const char *topic = "Farmsensordata";
+const char *mqtt_username = "";
+const char *mqtt_password = "";
+const int mqtt_port = 1883;
+WiFiClient espClient;
+PubSubClient client(espClient);
+// Pins
+#define RO_PIN 16 
+#define DI_PIN 17
+#define RE_PIN 14
+#define DE_PIN 12
+HardwareSerial modbusSerial(2); 
+ModbusMaster node;
+String pack;
+void callback(char *topic, byte *payload, unsigned int length) {
+    Serial.print("Message arrived in topic: ");
+    Serial.println(topic);
+    Serial.print("Message:");
+    for (int i = 0; i < length; i++) {
+        Serial.print((char) payload[i]);
+    }
+    Serial.println();
+}
+// For Transmit modet
+void preTransmission()
+{
+  digitalWrite(RE_PIN, HIGH);
+  digitalWrite(DE_PIN, HIGH);
+}
+// For receive mode
+void postTransmission()
+{
+  digitalWrite(RE_PIN, LOW);
+  digitalWrite(DE_PIN, LOW);
+}
+void setupMQTT() {
+  //connect to WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.println("Connecting to WiFi..");
+  }
+  Serial.println("Connected to the Wi-Fi network");
+  //connect to mqtt broker.
+  client.setServer(mqtt_broker, mqtt_port);
+  client.setCallback(callback);
+  while (!client.connected()) {
+    Serial.printf("The client connects to the public MQTT broker\n");
+    if (client.connect("ESP_SOIL", mqtt_username ,mqtt_password) ) {
+      Serial.println("Public MQTT broker connected");
+    } 
+    else {
+      Serial.print("failed with state ");
+      Serial.print(client.state());
+      delay(2000);
+    }
+  }
+}
+void setup()
+{
+  Serial.begin(9600);
+  setupMQTT();
+  modbusSerial.begin(9600, SERIAL_8N1, RO_PIN, DI_PIN);
+  pinMode(RE_PIN, OUTPUT);
+  pinMode(DE_PIN, OUTPUT);
+  digitalWrite(DE_PIN, LOW);
+  digitalWrite(RE_PIN, LOW);
+  node.begin(1, modbusSerial);
+  node.preTransmission(preTransmission);
+  node.postTransmission(postTransmission);
+  delay(3000);
+}
+void loop()
+{
+  char JSONmessageBuffer[1000];
+  client.loop();
+  uint8_t result;
+  //Starting address of the soil sensor node : 0x40004.
+  result = node.readHoldingRegisters(0x40004, 10);
+  if (result == node.ku8MBSuccess)
+  {
+  StaticJsonBuffer<5000> JSONbuffer;
+  JsonObject& JSONencoder = JSONbuffer.createObject();
+  float humi = node.getResponseBuffer(1)/100.0;
+  float temp = node.getResponseBuffer(0)/100.0;
+  float c = node.getResponseBuffer(2);
+  float ph =node.getResponseBuffer(3)/100.0;
+  float n = node.getResponseBuffer(4)/10.0;
+  float phos =  node.getResponseBuffer(5)/10.0;
+  float pots =node.getResponseBuffer(9)/100.0;
+  JSONencoder["humidity"] = humi;
+  JSONencoder["temperature"] =temp;
+  JSONencoder["conductivity"] = c ;
+  JSONencoder["ph"] = ph;
+  JSONencoder["nitrogen"] = n;
+  JSONencoder["phosphorus"] =phos;
+  JSONencoder["potassium"] = pots;
+  JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
+  Serial.println("Sending message to MQTT topic AS JSON..");
+  Serial.print("Humidity : ");
+  Serial.println(humi);
+  Serial.print("Temperature : ");
+  Serial.println(temp );
+  Serial.print("Conductivity : ");
+  Serial.println(c);
+  Serial.print("pH : ");
+  Serial.println(ph);
+  Serial.print("Nitrogen : ");
+  Serial.println(n);
+  Serial.print("Phosphorus : ");
+  Serial.println(phos);
+  Serial.print("Potassium : ");
+  Serial.println(pots);
+  Serial.println();
+  }
+  else
+  {
+    printModbusError(result);
+  }
+  client.publish(topic,JSONmessageBuffer);
+  delay(3000);
+}
+void printModbusError(uint8_t errNum)
+{
+  switch (errNum)
+  {
+  case node.ku8MBSuccess:
+    Serial.println(F("Success"));
+    break;
+  case node.ku8MBIllegalFunction:
+    Serial.println(F("Illegal Function Exception"));
+    break;
+  case node.ku8MBIllegalDataAddress:
+    Serial.println(F("Illegal Data Address Exception"));
+    break;
+  case node.ku8MBIllegalDataValue:
+    Serial.println(F("Illegal Data Value Exception"));
+    break;
+  case node.ku8MBSlaveDeviceFailure:
+Serial.println(F("Slave Device Failure"));
+    break;
+  case node.ku8MBInvalidSlaveID:
+    Serial.println(F("Invalid Slave ID"));
+    break;
+  case node.ku8MBInvalidFunction:
+    Serial.println(F("Invalid Function"));
+    break;
+  case node.ku8MBResponseTimedOut:
+    Serial.println(F("Response Timed Out"));
+    break;
+  case node.ku8MBInvalidCRC:
+    Serial.println(F("Invalid CRC"));
+    break;
+  default:
+    Serial.println(F("Unknown Error"));
+    break;
+  }
+}

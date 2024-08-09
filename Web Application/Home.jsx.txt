@@ -1,0 +1,88 @@
+import React, { useState, useEffect } from "react"; 
+import mqtt from "mqtt"; 
+const brokerAddress = "broker.hivemq.com";  
+const brokerPort = 8000;  
+const topic1 = "Farmdataweb"; 
+const topic2 = "PredictFarm"; 
+const client = mqtt.connect(`ws://${brokerAddress}:${brokerPort}/mqtt`); 
+function Home() { 
+const [data, setData] = useState({ 
+humidity: "", 
+temperature: "", 
+conductivity: "", 
+ph: "", 
+nitrogen: "", 
+phosphorus: "", 
+potassium: "", 
+crop: "", 
+profit: "" 
+}); 
+useEffect(() => { 
+const messageArrived = (topic, payload) => { 
+try { 
+const parsedData = JSON.parse(payload.toString()); 
+setData(prevData => ({ ...prevData, ...parsedData })); 
+console.log("Received data:", parsedData); 
+} catch (error) { 
+console.error("Error parsing MQTT message:", error); 
+} 
+}; 
+client.on("message", messageArrived); 
+28 
+client.subscribe(topic1); 
+client.subscribe(topic2); 
+return () => { 
+client.unsubscribe(topic1); 
+client.unsubscribe(topic2); 
+client.end(); 
+}; 
+}, []); 
+return ( 
+<div className="home"> 
+<div className="grid"> 
+<div className="card"> 
+<h1>Humidity &#x1F4A7;</h1> 
+<p>{data.humidity} <strong>%</strong></p> 
+</div> 
+<div className="card"> 
+<h1>Temperature &#127777;&#65039;</h1> 
+<p>{data.temperature} <strong>°C</strong></p> 
+</div> 
+<div className="card"> 
+<h1>Conductivity &#9889;</h1> 
+<p>{data.conductivity} <strong>uS/cm</strong></p> 
+</div> 
+<div className="card"> 
+<h1>pH &#129514;</h1> 
+<p>{data.ph}</p> 
+</div> 
+</div> 
+<div className="grid"> 
+<div className="card"> 
+<h1>Nitrogen N</h1> 
+<p>{data.nitrogen} <strong>mg/kg</strong></p> 
+</div> 
+<div className="card"> 
+<h1>Phosphorous P</h1> 
+<p>{data.phosphorus} <strong>mg/kg</strong></p> 
+</div> 
+<div className="card"> 
+<h1>Potassium K</h1> 
+<p>{data.potassium} <strong>mg/kg</strong></p> 
+</div> 
+29 
+</div> 
+<div className="grid"> 
+<div className="card"> 
+<h1>Crop &#127805;</h1> 
+<p>{data.crop}</p> 
+</div> 
+<div className="card"> 
+<h1>Cost &#128179;</h1> 
+<p><strong>&#8377;</strong> {data.profit}</p> 
+</div> 
+</div> 
+</div> 
+); 
+} 
+export default Home;

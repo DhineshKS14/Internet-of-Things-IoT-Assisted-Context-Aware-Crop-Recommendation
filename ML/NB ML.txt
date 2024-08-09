@@ -1,0 +1,118 @@
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder, LabelEncoder, KBinsDiscretizer
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, mean_squared_error, f1_score, recall_score, precision_score
+import pandas as pd
+import numpy as np
+
+# Sample input features
+x_train = df.drop(["crop", "totalprice"], axis=1)
+
+# Sample crop types (string labels)
+crop_types = df["crop"]
+# Sample cost factors (numeric labels)
+cost_factors = df["totalprice"]
+
+# Combine the crop types and cost factors for each sample
+labels = list(zip(crop_types, cost_factors))
+# Split the data into training and testing sets
+x_train, x_test, labels_train, labels_test = train_test_split(x_train, labels, test_size=0.2, random_state=42)
+
+# Assuming 'soiltype' is a categorical column in your DataFrame
+categorical_features = ['soiltype']
+
+# Separate numerical and categorical features
+numerical_features = [col for col in x_train.columns if col not in categorical_features]
+
+# Create a preprocessor to handle numerical and categorical features separately
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', SimpleImputer(strategy='mean'), numerical_features),
+        ('cat', OneHotEncoder(), categorical_features)
+    ])
+
+# Train Naive Bayes classifier for crop types
+clf_types = MultinomialNB()
+clf_types_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', clf_types)
+])
+# Extract only crop types from labels_train
+labels_train_crop = [item[0] for item in labels_train]
+# Convert the list of labels to a 1D array
+labels_train_crop = np.array(labels_train_crop)
+clf_types_pipeline.fit(x_train, labels_train_crop)
+
+# Train Naive Bayes classifier for cost factors
+clf_costs = MultinomialNB()
+clf_costs_pipeline = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', clf_costs)
+])
+# Extract only cost factors from labels_train
+labels_train_cost = [item[1] for item in labels_train]
+# Use LabelEncoder to encode the labels
+label_encoder = LabelEncoder()
+labels_train_cost_encoded = label_encoder.fit_transform(labels_train_cost)
+clf_costs_pipeline.fit(x_train, labels_train_cost_encoded)
+
+# Make predictions on the test set
+predicted_types = clf_types_pipeline.predict(x_test)
+predicted_costs_encoded = clf_costs_pipeline.predict(x_test)
+
+# Decode the predicted cost factors back to their original values
+predicted_costs = label_encoder.inverse_transform(predicted_costs_encoded)
+
+# Evaluate the model for the crop type prediction
+accuracy_types = accuracy_score([item[0] for item in labels_test], predicted_types)
+print(f"Accuracy for crop type prediction: {accuracy_types}")
+
+# Evaluate the model for the cost factor prediction
+mse_costs = mean_squared_error([item[1] for item in labels_test], predicted_costs)
+print(f"Mean Squared Error for cost factor: {mse_costs}")
+
+# Discretize the continuous cost factors into bins
+est = KBinsDiscretizer(n_bins=10, encode='ordinal', strategy='uniform')
+true_costs_discrete = est.fit_transform(np.array([item[1] for item in labels_test]).reshape(-1, 1))
+predicted_costs_discrete = est.transform(np.array(predicted_costs).reshape(-1, 1))
+
+# Compute F1 score for crop type prediction
+f1_types = f1_score([item[0] for item in labels_test], predicted_types, average='weighted')
+
+# Compute F1 score for cost factor prediction
+f1_costs = f1_score(true_costs_discrete, predicted_costs_discrete, average='weighted')
+
+print(f"F1 score for crop type prediction: {f1_types}")
+print(f"F1 score for cost factor prediction: {f1_costs}")
+
+# Compute recall score for crop type prediction
+recall_types = recall_score([item[0] for item in labels_test], predicted_types, average='weighted')
+
+# Compute recall score for cost factor prediction
+recall_costs = recall_score(true_costs_discrete, predicted_costs_discrete, average='weighted')
+
+print(f"Recall score for crop type prediction: {recall_types}")
+print(f"Recall score for cost factor prediction: {recall_costs}")
+
+# Compute precision score for crop type prediction
+precision_types = precision_score([item[0] for item in labels_test], predicted_types, average='weighted')
+
+# Compute precision score for cost factor prediction
+precision_costs = precision_score(true_costs_discrete, predicted_costs_discrete, average='weighted')
+
+print(f"Precision score for crop type prediction: {precision_types}")
+print(f"Precision score for cost factor prediction: {precision_costs}")
+
+# Example prediction on new data with soiltype parameter
+new_data = pd.DataFrame([[184, 50, 188, 24.63, 85.43, 6.76, 111.27, 'laterite']], columns=x_train.columns)
+new_predictions_type = clf_types_pipeline.predict(new_data)
+new_predictions_cost_encoded = clf_costs_pipeline.predict(new_data)
+
+# Decode the predicted cost factor back to its original value
+new_predictions_cost = label_encoder.inverse_transform(new_predictions_cost_encoded)
+
+print("Predicted crop type on new data:", new_predictions_type[0])
+print("Predicted cost factor on new data:", new_predictions_cost[0])

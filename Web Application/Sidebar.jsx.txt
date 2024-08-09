@@ -1,0 +1,100 @@
+import React, { useState, useEffect } from "react"; 
+import mqtt from "mqtt"; 
+function Sidebar() { 
+const brokerAddress = "broker.hivemq.com"; 
+const brokerPort = 8000; 
+const topic = "Farmgenerate"; 
+const client = mqtt.connect(`ws://${brokerAddress}:${brokerPort}/mqtt`); 
+const [selectedSoilType, setSelectedSoilType] = useState(""); 
+const [userState, setUserState] = useState(""); 
+const [rainfallData, setRainfallData] = useState({ 
+meghalaya: 208.38, 
+goa: 394.72, 
+assam: 208.38, 
+kerala: 360.63, 
+uttarpradesh: 94.61, 
+gujarat: 79.32, 
+rajasthan: 58.70, 
+madhyapradesh: 109.27, 
+andaman: 349.34, 
+tamilnadu: 137.67, 
+himachalpradesh: 103.76, 
+30 
+haryana: 67.98, 
+maharashtra: 141.07, 
+punjab: 53.44, 
+telangana: 120.85, 
+odisha: 142.08, 
+nagaland: 115.31, 
+karnataka: 145.09, 
+westbengal: 220.27, 
+tripura: 176.61 
+}); 
+const handleGenerate = () => { 
+const formattedState = userState.toLowerCase().replace(/\s/g, ""); 
+const rainfall = rainfallData[formattedState] || 0; 
+const data = JSON.stringify({ 
+toggle: 1, 
+soiltype: selectedSoilType, 
+rainfall: rainfall 
+}); 
+client.publish(topic, data, () => { 
+console.log("Data published successfully"); 
+}); 
+}; 
+useEffect(() => { 
+const getLocation = () => { 
+if (navigator.geolocation) { 
+navigator.geolocation.getCurrentPosition( 
+(position) => { 
+const { latitude, longitude } = position.coords; 
+fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`) 
+.then(response => response.json()) 
+.then(data => { 
+const stateName = data.address.state; 
+setUserState(stateName); 
+console.log("User's state:", stateName);  
+}) 
+.catch(error => { 
+31 
+}, 
+console.error('Error fetching data:', error); 
+}); 
+(error) => { 
+console.error('Error getting location:', error); 
+} 
+); 
+} else { 
+console.error('Geolocation is not supported by this browser.'); 
+} 
+}; 
+getLocation(); 
+}, []); 
+return ( 
+<div className="sidebar"> 
+<h1>Farmwise &#128668;</h1> 
+<img src="../sampleuserimage.png" alt="User avatar" /> 
+<p>John Cena</p> 
+<select 
+value={selectedSoilType} 
+onChange={(e) => setSelectedSoilType(e.target.value)} 
+> 
+<option value="">Select Soil Type</option> 
+<option value="laterite">Laterite</option> 
+<option value="sandyclayloam">Sandy Clay Loam</option> 
+<option value="loamy">Loamy</option> 
+<option value="inceptisols">Inceptisols</option> 
+<option value="desert">Desert</option> 
+<option value="alluvial">Alluvial</option> 
+<option value="sandy">Sandy</option> 
+<option value="black">Black</option> 
+<option value="regur">Regur</option> 
+<option value="red">Red</option> 
+<option value="mountains">Mountains</option> 
+<option value="claye">Claye</option> 
+<option value="deltaalluvium">Delta Alluvium</option> 
+</select> 
+<button onClick={handleGenerate}>Generate &#10024;</button> 
+</div> 
+);} 
+export default Sidebar;

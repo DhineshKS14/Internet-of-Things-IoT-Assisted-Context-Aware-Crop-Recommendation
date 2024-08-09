@@ -1,0 +1,139 @@
+body { 
+margin: 0; 
+background-color: #C2C5AA; 
+} 
+html { 
+font-family: "Nunito", sans-serif; 
+font-weight: 400; 
+font-style: normal; 
+color: #ffffff; 
+} 
+.container { 
+height: 100vh; 
+display: grid; 
+grid-template-columns: 300px 1fr;  
+} 
+.sidebar { 
+23 
+background-color: #414833; 
+grid-column: 1/2; 
+display: flex; 
+flex-direction: column; 
+align-items: center; 
+} 
+.sidebar h1 { 
+font-size: 36px; 
+font-weight: 400; 
+margin-top: 10px; 
+} 
+.sidebar img { 
+width: 125px; 
+height: 125px; 
+border: 5px solid #ffffff; 
+border-radius: 50%; 
+margin-top: 25px; 
+} 
+.sidebar p { 
+margin-top: 25px; 
+font-size: 28px; 
+} 
+select { 
+padding: 8px 12px; 
+font-size: 16px; 
+font-family: "Nunito", sans-serif; 
+font-weight: 600; 
+font-style: normal; 
+color: #ffffff; 
+background-color: #936639; 
+border: none; 
+border-radius: 10px; 
+width: 200px; 
+outline: none;  
+} 
+24 
+option { 
+} 
+font-size: 10px; 
+option[value=""] { 
+color: #ffffff; 
+} 
+option:checked { 
+background-color: #656D4A; 
+} 
+.sidebar button { 
+margin-top: auto; 
+margin-bottom: 60px; 
+padding: 25px 25px; 
+background-color: #936639; 
+color: #ffffff; 
+border: none; 
+text-align: center; 
+font-family: "Nunito", sans-serif; 
+font-weight: bold; 
+font-style: normal; 
+font-size: 25px; 
+border-radius: 30px; 
+} 
+.sidebar button:hover { 
+background-color: #7F4F24; 
+} 
+.sidebar button:active { 
+transform: scale(0.95); 
+} 
+.home{ 
+gap: 55px; 
+grid-column: 2/2; 
+display: grid; 
+grid-template-rows: 1fr 1fr 1fr; 
+margin: 40px; 
+25 
+} 
+.grid:nth-child(1) { 
+display: grid; 
+gap: 25px; 
+grid-template-columns: 1fr 1fr 1fr 1fr; 
+} 
+.grid:nth-child(2) { 
+display: grid; 
+gap: 25px; 
+grid-template-columns: 1fr 1fr 1fr; 
+} 
+.grid:nth-child(3) { 
+display: grid; 
+gap: 25px; 
+grid-template-columns: 1fr 1fr; 
+} 
+.card{ 
+border-radius: 25px; 
+display: flex; 
+flex-direction: column; 
+align-items: center;  
+height: 185px; 
+} 
+.card h1{ 
+font-size: 28px; 
+margin-top: 25px; 
+}  
+.card p{ 
+font-size: 32px; 
+margin-top: 10px; 
+}  
+.card:nth-child(1) { 
+background-color: #936639; 
+} 
+26 
+.card:nth-child(2) { 
+background-color: #A68A64;  
+} 
+.card:nth-child(3) { 
+background-color: #A4AC86;  
+} 
+.card:nth-child(4) { 
+background-color: #656D4A;  
+} 
+.grid:nth-child(3) .card:nth-child(1){ 
+background-color: #7F4F24; 
+} 
+.grid:nth-child(3) .card:nth-child(2){ 
+background-color: #414833; 
+} 
